@@ -43,17 +43,19 @@
                 <zookeeper.port>9970</zookeeper.port>
             </properties>
         </profile>
-        <profile>
+      <!--  <profile>
             <id>windows</id>
             <properties>
-                <!--
+                &lt;!&ndash;
                 annoyingly fo some reason cassandra init blows up when running EmbeddedCassandraService
                 under windows and maven, so you need to define a path with forward slashes
                 to your build directory, incl the trailing slash
-                -->
-                <cassandra.data>C:/cygwin1.7/home/ticktock/projects/qsandra/target/</cassandra.data>
+                uncomment and set to your target directory on windows using forward slashes and a trailing slash
+                if you dont feel like editing your settings.xml or passind a -Dcassandra.data all the time
+                &ndash;&gt;
+                <cassandra.data>C:/path/to/projects/qsandra/target/</cassandra.data>
             </properties>
-        </profile>
+        </profile>-->
     </profiles>
 
     <build>
