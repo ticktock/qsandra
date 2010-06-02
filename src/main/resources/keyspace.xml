@@ -1,0 +1,112 @@
+<Keyspace Name="MessageStore">
+    <!--
+    This is just the Keyspace for qsandra message store.
+    You would need to configure the ReplicaPlacementStrategy,ReplicationFactor,and EndpointSnitch
+    as appropriate for your usecase.
+    -->
+
+
+    <!--
+    row key: Broker(just 1 row per keyspace) {
+        destination-count:   long
+    }
+    -->
+    <ColumnFamily Name="Broker" CompareWith="BytesType"/>
+
+
+    <!--
+    row key: destinationName
+    Destinations: {
+         test.topic : {
+            isTopic: true
+            max-store-sequence: long
+            max-broker-sequence: long
+            queue-size: long
+         } ,
+         test.destination : {
+            isTopic: false
+            lastSequence: long
+            max-store-sequence: long
+            max-broker-sequence: long
+            queue-size: long
+         }
+    }
+    -->
+    <ColumnFamily Name="Destinations" CompareWith="BytesType"/>
+
+    <!--
+    row key: destinationName
+    Messages: {
+        test.topic : {
+            storeId :  byte[]
+            storeId2 : byte[]
+         },
+        test.destination : {
+            storeId3 :  byte[]
+            storeId4 : byte[]
+        }
+    }
+    -->
+    <ColumnFamily Name="Messages" CompareWith="LongType"/>
+
+
+    <!--
+    Same as Messages CF, but values are just a single byte, used to count messages, since
+    cassandra has to load all the columns into memory to count them
+    -->
+    <ColumnFamily Name="StoreIdsInUse" CompareWith="LongType"/>
+
+
+    <!--
+    row key: destinationName
+    MessageIdToStoreId : {
+            test.topic : {
+                producerId->producerSeq : storeId
+            }
+        }
+    -->
+    <ColumnFamily Name="MessageIdToStoreId" CompareWith="UTF8Type"/>
+
+
+    <!--
+    row key: destinationName
+    Subscriptions : {
+            test.topic : {
+                 clientId~~~~subscriptionName :{
+                    selector:  byte[]
+                    lastMessageAck: long
+                    subscribedDestination: byte[]
+                 }
+            }
+        }
+    -->
+
+    <ColumnFamily Name="Subscriptions" ColumnType="Super"
+                  CompareWith="UTF8Type"
+                  CompareSubcolumnsWith="UTF8Type"/>
+
+
+    <!--
+     ~ Strategy: Setting this to the class that implements
+     ~ IReplicaPlacementStrategy will change the way the node picker works.
+     ~ Out of the box, Cassandra provides
+     ~ org.apache.cassandra.locator.RackUnawareStrategy and
+     ~ org.apache.cassandra.locator.RackAwareStrategy (place one replica in
+     ~ a different datacenter, and the others on different racks in the same
+     ~ one.)
+    -->
+    <ReplicaPlacementStrategy>org.apache.cassandra.locator.RackUnawareStrategy</ReplicaPlacementStrategy>
+
+    <!-- Number of replicas of the data -->
+    <ReplicationFactor>1</ReplicationFactor>
+
+    <!--
+     ~ EndPointSnitch: Setting this to the class that implements
+     ~ AbstractEndpointSnitch, which lets Cassandra know enough
+     ~ about your network topology to route requests efficiently.
+     ~ Out of the box, Cassandra provides org.apache.cassandra.locator.EndPointSnitch,
+     ~ and PropertyFileEndPointSnitch is available in contrib/.
+    -->
+    <EndPointSnitch>org.apache.cassandra.locator.EndPointSnitch</EndPointSnitch>
+
+</Keyspace>

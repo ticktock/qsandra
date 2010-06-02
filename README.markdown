@@ -1,0 +1,105 @@
+#qsandra - A Cassandra backed PersistenceAdapter for ActiveMQ
+
+##Intro
+While this adapter can be used against any existing cassandra installation, the goal is to provide an ActiveMQ broker cluster
+that is available across multiple datacenters, that can tolerate the loss of a datacenter with no impact on availability
+(like the existing ActiveMQ pure master-slave deployed across datacenters), while not having to bring the broker cluster down and copy data files around to
+ restore a failed master (like the existing ActiveMQ JDBC or Shared Filesystem master-slave), and have message state easily replicated to multiple datacenters
+ without expensive database or storage software and hardware.
+
+##Running
+###Configuration
+####ActiveMQ
+To configure ActiveMQ to use Cassandra for message persistence, you need to know a few pieces of information.
+
+You need the host and port of whatever is doing cassandra load balancing for you.
+If running more than one broker instance and using ZooKeeper for master election, you need your zookeeper connect string.
+
+Here is an example spring config.
+
+
+         <broker:broker useJmx="true" persistent="true">
+
+                <broker:persistenceAdapter>
+                    <ref bean="adapter"/>
+                </broker:persistenceAdapter>
+
+                <broker:transportConnectors>
+                    <broker:transportConnector name="tcp"
+                                               uri="tcp://messages.example.com:60001"/>
+                </broker:transportConnectors>
+
+            </broker:broker>
+
+            <bean id="adapter" class="org.apache.activemq.store.cassandra.CassandraPersistenceAdapter">
+                <property name="cassandraClient" ref="cassandraClient"/>
+                <property name="masterElector" ref="masterElector"/>
+            </bean>
+
+            <bean id="cassandraClient" class="org.apache.activemq.store.cassandra.CassandraClient">
+                <property name="cassandraHost" value="cassandra.example.com"/>
+                <property name="cassandraPort" value="9160"/>
+            </bean>
+
+            <bean id="masterElector" class="org.apache.activemq.store.cassandra.ZooKeeperMasterElector">
+                <property name="zookeeperConnectString" value="zookeeper.datacenter1.example.com:9260,zookeeper.datacenter2.example.com:9260,zookeeper.datacenter3.example.com:9260"/>
+            </bean>
+
+####Cassandra
+The keyspace defined [here](qsandra/blob/master/src/main/resources/keyspace.xml) needs to be deployed into your cassandra cluster, *after you modify
+the ReplicaPlacementStrategy,ReplicationFactor,and EndPointSnitch appropriately for your use case* 
+
+####ZooKeeper
+If you are using the ZooKeeperMasterElector, a persistent node will be created at /qsandra/, and ephemeral, sequential nodes willbe created
+under this node, so if you have multiple broker clusters using the same ZooKeeper, use appropriate chroot suffixes in the connect strings
+to partition the master election appropriately.
+
+##Usecases
+All of the usecases assume a familiarity with, or at least the willingness to learn, the techniques for running an Apache Cassandra cluster,
+and in cases where there is more than a single ActiveMQ broker (when using ActiveMQ failover://), Apache ZooKeeper, which is used to elect the
+master broker. (You can also write your own master election if you dont want to use zookeeper). Most of the work here is setting up Cassandra
+and ZooKeeper for appropriate replication and availablity.
+
+
+###Multi Datacenter HA ActiveMQ Broker Cluster
+Due to the QUORUM mechanics of both Cassandra and ZooKeeper, to tolerate the loss of a datacenter while not impacting the availability of ActiveMQ
+there must be at least 3 datacenters involved in this configuration. Each datacenter needs at least one zooKeeper instance, and at least one cassandra instance.
+
+So lets say we have 3 datacenters, with 1 ZooKeeper node, 2 Cassandra nodes and 2 ActiveMQ brokers per data center.
+
+Use the DatacenterShardStragegy for replica placement, set the ReplicationFactor to 6, and the ReplicationFactor for each data center to 2.
+
+With QUORUM ConsistencyLevel for reads and writes, reads and writes will succeed when 4 (ReplicationFactor / 2 + 1) reads or writes are successful.
+So this means if a datacenter is network partitioned or lost, we keep on trucking. Any 2 nodes of the 6 can be unavailable.
+
+Similarly with Zookeeper, any 1 node of the 3 can be unavailable.
+
+If the master broker is in the datacenter that dies, or is partitioned, one of the other brokers in the other datacenter will be elected master,
+and clients should fail over (using failover:// brokerURL)
+
+
+###Single Datacenter, Single Broker instance
+This is a much simpler configuration. If a MasterElector is not set on the PersistenceAdapter, the broker will assume it is master.
+
+
+
+##Building
+Since there isnt a clean maven distribution of Cassandra at this point, you need to do some initial setup before you can build.
+Download Cassandra, and unpack such that the cassandra directory  is a sibling directory of qsandra.
+
+for example
+
+/path/to/projects/qsandra/
+
+/path/to/projects/apache-cassandra-0.6.1/    
+
+All the cassandra dependencies are declared as system dependencies in the pom file, so you need to unpack the cassandra distro as stated above
+or set the ${cassandra.home} maven property while building to point to where you unpacked. (mvn -Dcassandra.home=/different/path ...)
+
+If you are on a non windows platform, you should be able to mvn clean install at this point.
+
+##Building on Windows
+Due to some funky behavior in maven and cassandra on Windows, you will need to set another maven property to have a successful build and test on Windows.
+Set the ${cassandra.data} maven property to the path to where you want to store cassandra data, *using unescaped forward slashes in the path and with a trailing slash!*.
+
+Like so mvn -Dcassandra.data=C:/path/to/projects/qsandra/target/  ...
