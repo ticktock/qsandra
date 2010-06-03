@@ -4,3 +4,4 @@ qsandra.iws
 qsandra.iml
 .project
 .classpath
+*.patch
