@@ -3,8 +3,8 @@
 ##Intro
 While this adapter can be used against any existing cassandra installation, the goal is to provide an ActiveMQ broker cluster
 that is available across multiple datacenters, that can tolerate the loss of a datacenter with no impact on availability
-(like the existing ActiveMQ pure master-slave deployed across datacenters), while not having to bring the broker cluster down and copy data files around to
- restore a failed master (like the existing ActiveMQ JDBC or Shared Filesystem master-slave), and have message state easily replicated to multiple datacenters
+(like the existing ActiveMQ pure master-slave, except capable of more than 2 brokers/datacenters) while not having to bring the broker cluster down and copy data files around to
+ restore a failed master (unlike the existing ActiveMQ pure master-slave), and have message state easily replicated to multiple datacenters
  without expensive database or storage software and hardware.
 
 ##Running
@@ -12,7 +12,7 @@ that is available across multiple datacenters, that can tolerate the loss of a d
 ####ActiveMQ
 To configure ActiveMQ to use Cassandra for message persistence, you need to know a few pieces of information.
 
-You need the host and port of whatever is doing cassandra load balancing for you.
+You need the host and port of whatever is doing cassandra thrift interface load balancing for you.
 If running more than one broker instance and using ZooKeeper for master election, you need your zookeeper connect string.
 
 Here is an example spring config.
