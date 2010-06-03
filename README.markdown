@@ -17,8 +17,13 @@ If running more than one broker instance and using ZooKeeper for master election
 
 Here is an example spring config.
 
+		<beans xmlns="http://www.springframework.org/schema/beans" 
+  				xmlns:broker="http://activemq.apache.org/schema/core"
+  				xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  				xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+  				http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
 
-         <broker:broker useJmx="true" persistent="true">
+         	<broker:broker useJmx="true" persistent="true">
 
                 <broker:persistenceAdapter>
                     <ref bean="adapter"/>
@@ -42,8 +47,10 @@ Here is an example spring config.
             </bean>
 
             <bean id="masterElector" class="org.apache.activemq.store.cassandra.ZooKeeperMasterElector">
-                <property name="zookeeperConnectString" value="zookeeper.datacenter1.example.com:9260,zookeeper.datacenter2.example.com:9260,zookeeper.datacenter3.example.com:9260"/>
+                <property name="zookeeperConnectString" 
+                value="zookeeper.datacenter1.example.com:9260,zookeeper.datacenter2.example.com:9260,zookeeper.datacenter3.example.com:9260"/>
             </bean>
+		<beans> 
 
 ####Cassandra
 The keyspace defined [here](qsandra/blob/master/src/main/resources/keyspace.xml) needs to be deployed into your cassandra cluster, *after you modify
