@@ -1,10 +1,14 @@
 package org.apache.activemq.store.cassandra;
 
 import org.apache.activemq.broker.ConnectionContext;
-import org.apache.activemq.command.*;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.command.Message;
+import org.apache.activemq.command.MessageAck;
+import org.apache.activemq.command.MessageId;
 import org.apache.activemq.store.AbstractMessageStore;
 import org.apache.activemq.store.MessageRecoveryListener;
 import org.apache.activemq.usage.MemoryUsage;
+import org.apache.cassandra.utils.BloomFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +27,7 @@ public class CassandraMessageStore extends AbstractMessageStore {
     private MemoryUsage memoryUsage;
     protected AtomicLong lastStoreSequenceId = new AtomicLong(-1);
     private AtomicLong queueSize = new AtomicLong(0);
+    private BloomFilter duplicateDetector;
 
 
     public CassandraMessageStore(CassandraPersistenceAdapter adapter, ActiveMQDestination destination) {
@@ -31,7 +36,7 @@ public class CassandraMessageStore extends AbstractMessageStore {
     }
 
     public void addMessage(ConnectionContext context, Message message) throws IOException {
-        getAdapter().getCassandra().saveMessage(destination, getAdapter().getStoreSequenceGenerator().incrementAndGet(), message.getMessageId(), getAdapter().marshall(message), queueSize);
+        getAdapter().getCassandra().saveMessage(destination, getAdapter().getStoreSequenceGenerator().incrementAndGet(), message.getMessageId(), getAdapter().marshall(message), queueSize, duplicateDetector);
     }
 
     public Message getMessage(MessageId identity) throws IOException {
@@ -110,6 +115,7 @@ public class CassandraMessageStore extends AbstractMessageStore {
         if (log.isDebugEnabled()) {
             log.debug("Destination: {} has {} ", CassandraUtils.getDestinationKey(destination), queueSize.get());
         }
+        duplicateDetector = getAdapter().getCassandra().getMessageIdFilterFor(destination, queueSize.get());
     }
 
     public void stop() throws Exception {

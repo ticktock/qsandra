@@ -2,6 +2,7 @@ package org.apache.activemq.store.cassandra;
 
 import org.apache.activemq.command.*;
 import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.utils.BloomFilter;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.BeforeClass;
@@ -22,6 +23,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
 
 
     private static CassandraClient client;
+    private static BloomFilter dups = BloomFilter.getFilter(1000, 0.01d);
 
     @BeforeClass
     public static void createAdapter() throws TTransportException {
@@ -30,6 +32,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         client.setCassandraHost("localhost");
         client.setCassandraPort(getCassandraPort());
         client.setConsistencyLevel(ConsistencyLevel.QUORUM);
+
     }
 
 
@@ -55,7 +58,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         MessageId messageId = new MessageId(producerId, 123123123L);
         messageId.setBrokerSequenceId(321321321L);
         AtomicLong count = new AtomicLong(0);
-        client.saveMessage(queue, 1, messageId, fakeMessage, count);
+        client.saveMessage(queue, 1, messageId, fakeMessage, count, dups);
         assertEquals(1, client.getMessageCount(queue));
         log.info("Saved");
         byte[] retrieved = client.getMessage(queue, 1);
@@ -86,7 +89,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         assertEquals(topic.getQualifiedName(), info2.getDestination().getQualifiedName());
         MessageId id = new MessageId("PRODUCERID", 123123);
         id.setBrokerSequenceId(7);
-        client.saveMessage(topic, 1, id, new byte[1], new AtomicLong(0));
+        client.saveMessage(topic, 1, id, new byte[1], new AtomicLong(0), dups);
         client.acknowledge(topic, clientName, null, id);
         assertEquals(1, client.lookupAllSubscriptions(topic).length);
         assertNotNull(client.lookupSubscription(topic, clientName, null));
@@ -113,7 +116,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         for (int i = 1; i <= 1000; i++, prodseq++, brokerseq++) {
             MessageId messageId = new MessageId(producerId, prodseq);
             messageId.setBrokerSequenceId(brokerseq);
-            client.saveMessage(queue, i, messageId, fakeMessage, count);
+            client.saveMessage(queue, i, messageId, fakeMessage, count, dups);
             log.debug("saved:{}", i);
         }
         ColumnParent p = new ColumnParent(CassandraIdentifier.MESSAGES_FAMILY.string());

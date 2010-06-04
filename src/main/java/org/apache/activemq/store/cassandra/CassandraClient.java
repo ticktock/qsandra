@@ -1,11 +1,17 @@
 package org.apache.activemq.store.cassandra;
 
-import org.apache.activemq.command.*;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.command.MessageId;
+import org.apache.activemq.command.SubscriptionInfo;
 import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.utils.BloomFilter;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.*;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +133,32 @@ public class CassandraClient {
         getCassandraConnection().insert(KEYSPACE.string(), BROKER_KEY.string(), BROKER_DESTINATION_COUNT_COLUMN_PATH, getBytes(count), timestamp(), consistencyLevel);
     }
 
+    public BloomFilter getMessageIdFilterFor(ActiveMQDestination destination, long size) {
+        BloomFilter bloomFilter = BloomFilter.getFilter(Math.max(size, 100000), 0.01d);
+        byte[] start = new byte[0];
+        byte[] end = new byte[0];
+        long count = 0;
+        while (count < size) {
+            SlicePredicate slicePredicate = new SlicePredicate();
+            SliceRange sliceRange = new SliceRange(start, end, false, 10000);
+            slicePredicate.setSlice_range(sliceRange);
+            List<ColumnOrSuperColumn> orSuperColumns = null;
+            try {
+                orSuperColumns = getCassandraConnection().get_slice(KEYSPACE.string(), getDestinationKey(destination), new ColumnParent(MESSAGE_TO_STORE_ID_FAMILY.string()), slicePredicate, consistencyLevel);
+                for (ColumnOrSuperColumn orSuperColumn : orSuperColumns) {
+                    Column column = orSuperColumn.getColumn();
+                    start = column.getName();
+                    count++;
+                    bloomFilter.add(start);
+                }
+            } catch (Exception e) {
+                log.error("Exception while populating bloom filter for :" + destination.getQualifiedName(), e);
+                throw new RuntimeException(e);
+            }
+
+        }
+        return bloomFilter;
+    }
 
     /*Destination CF Methods*/
 
@@ -277,7 +309,7 @@ public class CassandraClient {
     }
 
     private String getMessageIndexKeyString(MessageId id) {
-        return new StringBuilder(id.getProducerId().toString()).append("->").append(id.getProducerSequenceId()).toString();
+        return id.toString();
     }
 
     public long getStoreId(ActiveMQDestination destination, MessageId identity) {
@@ -315,7 +347,21 @@ public class CassandraClient {
     }
 
 
-    public void saveMessage(ActiveMQDestination destination, long id, MessageId messageId, byte[] messageBytes, AtomicLong queueSize) {
+    public void saveMessage(ActiveMQDestination destination, long id, MessageId messageId, byte[] messageBytes, AtomicLong queueSize, BloomFilter duplicateDetector) {
+        if (duplicateDetector.isPresent(getMessageIndexKey(messageId))) {
+            ColumnPath path = new ColumnPath(MESSAGE_TO_STORE_ID_FAMILY.string());
+            path.setColumn(getMessageIndexKey(messageId));
+            try {
+                ColumnOrSuperColumn column = getCassandraConnection().get(KEYSPACE.string(), getDestinationKey(destination), path, consistencyLevel);
+                log.warn("Duplicate Message Save recieved from broker for {}...ignoring", messageId);
+                return;
+            } catch (NotFoundException e) {
+                log.warn("NotFoundException while confirming duplicate, BloomFilter false positive, continuing");
+            } catch (Exception e) {
+                log.error("Exception whhile confiring duplicate detected by BloomFilter", e);
+            }
+
+        }
         Map<String, Map<String, List<Mutation>>> mutations = map();
         Map<String, List<Mutation>> saveMutation = map();
 
@@ -344,6 +390,7 @@ public class CassandraClient {
         storeIdsMutations.add(getInsertOrUpdateColumnMutation(getBytes(id), new byte[1], current));
         try {
             getCassandraConnection().batch_mutate(KEYSPACE.string(), mutations, consistencyLevel);
+            duplicateDetector.add(getMessageIndexKey(messageId));
         } catch (Exception e) {
             queueSize.decrementAndGet();
             log.error("Exception savingMessage", e);
