@@ -209,24 +209,10 @@ public class CassandraClient {
         keyRange.setEnd_key(getString(new byte[0]));
         try {
             List<KeySlice> slices = getCassandraConnection().get_range_slices(KEYSPACE.string(), parent, predicate, keyRange, consistencyLevel);
-            List<String> keys = new ArrayList<String>();
-            for (KeySlice keySlice : slices) {
-                keys.add(keySlice.getKey());
-            }
-            SlicePredicate topicPredicate = new SlicePredicate();
-            topicPredicate.setColumn_names(Collections.singletonList(getBytes("isTopic")));
-            Map<String, List<ColumnOrSuperColumn>> result = getCassandraConnection().multiget_slice(KEYSPACE.string(), keys, parent, predicate, consistencyLevel);
 
             Set<ActiveMQDestination> destinations = set();
-            for (Map.Entry<String, List<ColumnOrSuperColumn>> stringListEntry : result.entrySet()) {
-                if (stringListEntry.getValue().size() == 1) {
-                    boolean isTopic = getBoolean(stringListEntry.getValue().get(0).getColumn().getValue());
-                    if (isTopic) {
-                        destinations.add(ActiveMQDestination.createDestination(stringListEntry.getKey(), ActiveMQDestination.TOPIC_TYPE));
-                    } else {
-                        destinations.add(ActiveMQDestination.createDestination(stringListEntry.getKey(), ActiveMQDestination.QUEUE_TYPE));
-                    }
-                }
+            for (KeySlice slice : slices) {
+                destinations.add(ActiveMQDestination.createDestination(slice.getKey(), ActiveMQDestination.QUEUE_TYPE));
             }
             return destinations;
         } catch (Exception e) {

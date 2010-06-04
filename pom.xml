@@ -36,26 +36,13 @@
             </activation>
             <properties>
                 <cassandra.home>${project.basedir}${file.separator}..${file.separator}apache-cassandra-${cassandra.version}</cassandra.home>
-                <cassandra.data>${project.build.directory}${file.separator}</cassandra.data>
+                <cassandra.data>target/</cassandra.data>
                 <zookeeper.data>${project.build.directory}${file.separator}</zookeeper.data>
                 <cassandra.conf>${project.build.testOutputDirectory}${file.separator}</cassandra.conf>
                 <thrift.port>9160</thrift.port>
                 <zookeeper.port>9970</zookeeper.port>
             </properties>
         </profile>
-      <!--  <profile>
-            <id>windows</id>
-            <properties>
-                &lt;!&ndash;
-                annoyingly fo some reason cassandra init blows up when running EmbeddedCassandraService
-                under windows and maven, so you need to define a path with forward slashes
-                to your build directory, incl the trailing slash
-                uncomment and set to your target directory on windows using forward slashes and a trailing slash
-                if you dont feel like editing your settings.xml or passind a -Dcassandra.data all the time
-                &ndash;&gt;
-                <cassandra.data>C:/path/to/projects/qsandra/target/</cassandra.data>
-            </properties>
-        </profile>-->
     </profiles>
 
     <build>
@@ -85,11 +72,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>-Xmx1024m</argLine>
                     <forkMode>pertest</forkMode>
                     <useFile>false</useFile>
                     <excludes>
                         <!--Base test-->
                         <exclude>**/EmbeddedServicesTest.java</exclude>
+                        <!--run this by itself, too heavy for my old laptop!-->
+                        <exclude>**/CassandraStoreBrokerTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

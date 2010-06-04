@@ -37,15 +37,17 @@ public class CassandraClientTest extends EmbeddedServicesTest {
 
 
     public void removeDestinations(AtomicInteger destinationCount) throws TTransportException {
-        assertFalse(client.createDestination("test.queue.1", false, destinationCount));
-        client.deleteQueue(new ActiveMQQueue("test.queue.1"), destinationCount);
-        client.deleteTopic(new ActiveMQTopic("test,topic.1"), destinationCount);
+        assertFalse(client.createDestination("queue://test.queue.1", false, destinationCount));
+        client.deleteQueue(new ActiveMQQueue("queue://test.queue.1"), destinationCount);
+        client.deleteTopic(new ActiveMQTopic("topic://test,topic.1"), destinationCount);
     }
 
 
     private void createDestinations(AtomicInteger destinationCount) throws TTransportException {
-        client.createDestination("test.queue.1", false, destinationCount);
-        client.createDestination("test.topic.1", true, destinationCount);
+        client.createDestination("queue://test.queue.1", false, destinationCount);
+        client.createDestination("topic://test.topic.1", true, destinationCount);
+        assertEquals(2, client.getDestinations().size());
+        assertEquals(2, client.getDestinationCount());
     }
 
 
@@ -107,7 +109,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
     public void testQuery() throws TException, UnsupportedEncodingException, TimedOutException, InvalidRequestException, UnavailableException {
 
         createDestinations(new AtomicInteger(0));
-        ActiveMQQueue queue = new ActiveMQQueue("test.queue.1");
+        ActiveMQQueue queue = new ActiveMQQueue("queue://test.queue.1");
         byte[] fakeMessage = "Happy".getBytes("UTF-8");
         ProducerId producerId = new ProducerId("PRODUCERKEY");
         AtomicLong count = new AtomicLong(0);

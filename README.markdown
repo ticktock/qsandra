@@ -103,10 +103,4 @@ for example
 All the cassandra dependencies are declared as system dependencies in the pom file, so you need to unpack the cassandra distro as stated above
 or set the ${cassandra.home} maven property while building to point to where you unpacked. (mvn -Dcassandra.home=/different/path ...)
 
-If you are on a non windows platform, you should be able to mvn clean install at this point.
-
-##Building on Windows
-Due to some funky behavior in maven and cassandra on Windows, you will need to set another maven property to have a successful build and test on Windows.
-Set the ${cassandra.data} maven property to the path to where you want to store cassandra data, *using unescaped forward slashes in the path and with a trailing slash!*.
-
-Like so mvn -Dcassandra.data=C:/path/to/projects/qsandra/target/  ...
+You should be able to mvn clean install at this point.

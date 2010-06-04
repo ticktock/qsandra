@@ -228,7 +228,9 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
 
 
     public void stop() throws Exception {
-        masterElector.stop();
+        if (masterElector != null) {
+            masterElector.stop();
+        }
     }
 
 
