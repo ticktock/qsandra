@@ -91,16 +91,8 @@ This is a much simpler configuration. If a MasterElector is not set on the Persi
 
 
 ##Building
-Since there isnt a clean maven distribution of Cassandra at this point, you need to do some initial setup before you can build.
-Download Cassandra, and unpack such that the cassandra directory  is a sibling directory of qsandra.
+There is a maven repo at http://maven.shorrockin.com/ that thankfully unpacks and deploys all the cassandra dependencies, so
 
-for example
+        mvn clean install
 
-/path/to/projects/qsandra/
-
-/path/to/projects/apache-cassandra-0.6.1/    
-
-All the cassandra dependencies are declared as system dependencies in the pom file, so you need to unpack the cassandra distro as stated above
-or set the ${cassandra.home} maven property while building to point to where you unpacked. (mvn -Dcassandra.home=/different/path ...)
-
-You should be able to mvn clean install at this point.
+should do it.
