@@ -2,8 +2,12 @@ package org.apache.activemq.store.cassandra.scala
 
 import com.shorrockin.cascal.session._
 import reflect.BeanProperty
-import org.apache.activemq.store.cassandra.{*}
+import org.apache.activemq.store.cassandra.*
 import org.apache.activemq.store.cassandra.scala.*
+import CassandraClient.Id._
+import org.apache.activemq.command.ActiveMQDestination
+import org.apache.cassandra.utils.BloomFilter
+import com.shorrockin.cascal.model.Column
 
 class CassandraClient() {
   @BeanProperty var cassandraHost: String = _
@@ -36,23 +40,55 @@ class CassandraClient() {
   def getDestinationCount(): int = {
     withSession {
       session =>
-        session.get(
-          KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ BROKER_DESTINATION_COUNT
-          )
+        session.get
+        (KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ BROKER_DESTINATION_COUNT)
         match {
           case Some(x) =>
-            val rc: = x.value
-            rc.key = id
-            Some(rc)
+            x.get
           case None =>
-            None
+            insertDestinationCount(0)
+            0
         }
     }
+  }
+
+  def insertDestinationCount(count: int) = {
+    withSession {
+      session =>
+        session.insert(KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ (BROKER_DESTINATION_COUNT, count))
+    }
+  }
+
+  def getMessageIdFilterFor(destination: ActiveMQDestination, size: long): BloomFilter = {
+    val filterSize = Math.max(size, 10000)
+    val bloomFilter = BloomFilter.getFilter(filterSize, 0.01d);
+    var start = ""
+    val end = ""
+    var count = 0
+    while (count < filterSize) {
+      withSession {
+        session =>
+          val cols = session.list(KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination, RangePredicate(start, end))
+          for (val col: Column <- cols) {
+            bloomFilter.add(col.name)
+            count ++
+          }
+      }
+    }
+    bloomFilter
   }
 
 }
 
 object CassandraClient {
+  implicit def destinationKey(destination: ActiveMQDestination): String = {
+    destination.getQualifiedName
+  }
+
+  implicit def destinationFromKey(key: String): ActiveMQDestination = {
+    ActiveMQDestination.createDestination(key, ActiveMQDestination.QUEUE_TYPE)
+  }
+
   object Id {
     val KEYSPACE = "MessageStore"
     val BROKER_FAMILY = "Broker"
