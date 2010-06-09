@@ -10,11 +10,11 @@ import org.apache.cassandra.utils.BloomFilter
 import grizzled.slf4j.Logger
 import org.apache.activemq.store.cassandra.{DestinationMaxIds => Max}
 import org.apache.activemq.store.cassandra._
-import com.shorrockin.cascal.model.{StandardKey, Key, Column}
 import org.apache.cassandra.thrift.NotFoundException
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
 import org.apache.activemq.command.{SubscriptionInfo, MessageId, ActiveMQDestination}
 import collection.jcl.{ArrayList, HashSet, Set}
+import com.shorrockin.cascal.model.{SuperColumn, StandardKey, Key, Column}
 
 class CassandraClient() {
   @BeanProperty var cassandraHost: String = _
@@ -308,16 +308,32 @@ class CassandraClient() {
   def addSubscription(destination: ActiveMQDestination, subscriptionInfo: SubscriptionInfo, ack: long): Unit = {
     withSession {
       session =>
-        val key = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ subscriptionSupercolumn(subscriptionInfo) \ (SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN, subscriptionInfo.getSubscribedDestination)
-        /* val col2 = key \ (SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN, ack)
-      var insert3 = Nil
-      if (subscriptionInfo.getSelector != null) {
-        val col3 = key \ (SUBSCRIPTIONS_SELECTOR_SUBCOLUMN, subscriptionInfo.getSelector)
-        insert3 = Insert(col3);
-        */
-        session.batch(Insert(key) :: Nil)
+        val supercolumnName = subscriptionSupercolumn(subscriptionInfo)
+        val supercolumn = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ supercolumnName
+        val subdest = supercolumn \ (SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN, subscriptionInfo.getSubscribedDestination)
+        val ackcol = supercolumn \ (SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN, ack)
+        var list = Insert(subdest) :: Insert(ackcol)
+        if (subscriptionInfo.getSelector != null) {
+          val selcolopt = supercolumn \ (SUBSCRIPTIONS_SELECTOR_SUBCOLUMN, subscriptionInfo.getSelector)
+          list.add(Insert(selcolopt))
+        }
+        session.batch(list)
     }
   }
+
+  def lookupSubscription(destination: ActiveMQDestination, clientId: String, subscriptionName: String): SubscriptionInfo = {
+    withSession {
+      session =>
+        var subscriptionInfo = new SubscriptionInfo
+        subscriptionInfo.setClientId(clientId)
+        subscriptionInfo.setSubscriptionName(subscriptionName)
+        subscriptionInfo.setDestination(destination)
+        var dtype: Byte = if (destination.isTopic) ActiveMQDestination.TOPIC_TYPE else ActiveMQDestination.QUEUE_TYPE
+        session.get(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName)) 
+
+    }
+  }
+
 }
 
 object CassandraClient {
