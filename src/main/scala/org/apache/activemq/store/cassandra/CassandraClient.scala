@@ -204,7 +204,7 @@ class CassandraClient() {
             x.value
           case None =>
             logger.error({"Message Not Found for destination:%s id:%s".format(destination, storeId)})
-            throw new NotFoundException;
+            throw new RuntimeException(new NotFoundException);
         }
     }
   }

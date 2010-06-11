@@ -70,7 +70,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
             byte[] rte2 = client.getMessage(queue, 1);
             assertFalse(new String(fakeMessage).equals(new String(rte2)));
         } catch (Exception e) {
-            assertTrue(e instanceof NotFoundException);
+            assertTrue(e.getCause() instanceof NotFoundException);
         }
         assertEquals(0, client.getMessageCount(queue));
     }
