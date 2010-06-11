@@ -28,6 +28,7 @@ public class CassandraPersistenceAdapterTest extends PersistenceAdapterTestSuppo
         cassandraClient.setCassandraHost("localhost");
         cassandraClient.setCassandraPort(EmbeddedServicesTest.getCassandraPort());
         cassandraClient.setConsistencyLevel(ConsistencyLevel.QUORUM);
+        cassandraClient.start();
         ZooKeeperMasterElector elector = new ZooKeeperMasterElector();
         elector.setZookeeperConnectString(EmbeddedServicesTest.getZookeeperConnectString());
         adapter.setCassandraClient(cassandraClient);

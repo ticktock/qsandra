@@ -71,12 +71,12 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
     public MessageStore createQueueMessageStore(ActiveMQQueue destination) throws IOException {
         CassandraMessageStore store = queues.get(destination);
         if (store == null) {
-            cassandra.createDestination(CassandraUtils.getDestinationKey(destination), false, destinationCount);
+            cassandra.createDestination(CassandraClientUtil.getDestinationKey(destination), false, destinationCount);
             store = new CassandraMessageStore(this, destination);
             try {
                 store.start();
             } catch (Exception e) {
-                log.error("Error Starting queue:" + CassandraUtils.getDestinationKey(destination), e);
+                log.error("Error Starting queue:" + CassandraClientUtil.getDestinationKey(destination), e);
                 throw new IOException(e);
             }
             queues.putIfAbsent(destination, store);
@@ -88,12 +88,12 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
     public TopicMessageStore createTopicMessageStore(ActiveMQTopic destination) throws IOException {
         CassandraTopicMessageStore store = topics.get(destination);
         if (store == null) {
-            cassandra.createDestination(CassandraUtils.getDestinationKey(destination), true, destinationCount);
+            cassandra.createDestination(CassandraClientUtil.getDestinationKey(destination), true, destinationCount);
             store = new CassandraTopicMessageStore(this, destination);
             try {
                 store.start();
             } catch (Exception e) {
-                log.error("Error Starting queue:" + CassandraUtils.getDestinationKey(destination), e);
+                log.error("Error Starting queue:" + CassandraClientUtil.getDestinationKey(destination), e);
                 throw new IOException(e);
             }
 
@@ -177,6 +177,7 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
 
     public void start() throws Exception {
         //Zookeeper master election
+        cassandra.start();
         if (masterElector != null) {
             masterElector.setMasterLostHandler(new Runnable() {
                 @Override
@@ -228,9 +229,11 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
 
 
     public void stop() throws Exception {
+
         if (masterElector != null) {
             masterElector.stop();
         }
+        cassandra.stop();
     }
 
 

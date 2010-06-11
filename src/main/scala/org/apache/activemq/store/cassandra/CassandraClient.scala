@@ -1,27 +1,28 @@
-package org.apache.activemq.store.cassandra.scala
+package org.apache.activemq.store.cassandra
 
 import com.shorrockin.cascal.session._
 import com.shorrockin.cascal.utils.Conversions._
 import collection.jcl.Conversions._
 import reflect.BeanProperty
 import CassandraClient._
-import CassandraClient.Id._
 import org.apache.cassandra.utils.BloomFilter
 import grizzled.slf4j.Logger
 import org.apache.activemq.store.cassandra.{DestinationMaxIds => Max}
 import org.apache.activemq.store.cassandra._
-import org.apache.cassandra.thrift.NotFoundException
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
 import org.apache.activemq.command.{SubscriptionInfo, MessageId, ActiveMQDestination}
 import collection.jcl.{ArrayList, HashSet, Set}
 import com.shorrockin.cascal.model.{SuperColumn, StandardKey, Key, Column}
+import collection.mutable.ListBuffer
+import org.apache.cassandra.thrift.{ConsistencyLevel, NotFoundException}
 
 class CassandraClient() {
   @BeanProperty var cassandraHost: String = _
-  @BeanProperty var cassandraPort: int = _
-  @BeanProperty var cassandraTimeout: int = _
+  @BeanProperty var cassandraPort: Int = _
+  @BeanProperty var cassandraTimeout: Int = _
+  @BeanProperty var consistencyLevel: ConsistencyLevel = _
 
-  val logger = Logger(this.getClass)
+
 
   protected var pool: SessionPool = null
 
@@ -44,7 +45,7 @@ class CassandraClient() {
     }
   }
 
-  def getDestinationCount(): int = {
+  def getDestinationCount(): Int = {
     withSession {
       session =>
         session.get(KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ BROKER_DESTINATION_COUNT) match {
@@ -57,20 +58,20 @@ class CassandraClient() {
     }
   }
 
-  def insertDestinationCount(count: int) = {
+  def insertDestinationCount(count: Int) = {
     withSession {
       session =>
         session.insert(KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ (BROKER_DESTINATION_COUNT, count))
     }
   }
 
-  def getMessageIdFilterFor(destination: ActiveMQDestination, size: long): BloomFilter = {
+  def getMessageIdFilterFor(destination: ActiveMQDestination, size: Long): BloomFilter = {
     val filterSize = Math.max(size, 10000)
     val bloomFilter = BloomFilter.getFilter(filterSize, 0.01d);
     var start = ""
     val end = ""
-    var counter: int = 0
-    while (counter < filterSize) {
+    var counter: Int = 0
+    while (counter < size) {
       withSession {
         session =>
           val cols = session.list(KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination, RangePredicate(start, end))
@@ -86,7 +87,7 @@ class CassandraClient() {
   }
 
 
-  def createDestination(name: String, isTopic: boolean, destinationCount: AtomicInteger): boolean = {
+  def createDestination(name: String, isTopic: Boolean, destinationCount: AtomicInteger): Boolean = {
     withSession {
       session =>
         session.get(KEYSPACE \ DESTINATIONS_FAMILY \ name \ DESTINATION_IS_TOPIC_COLUMN) match {
@@ -96,7 +97,7 @@ class CassandraClient() {
           case None =>
             val topic = KEYSPACE \ DESTINATIONS_FAMILY \ name \ (DESTINATION_IS_TOPIC_COLUMN, isTopic)
             val maxStore = KEYSPACE \ DESTINATIONS_FAMILY \ name \ (DESTINATION_MAX_STORE_SEQUENCE_COLUMN, 0L)
-            val queueSize = KEYSPACE \ DESTINATIONS_FAMILY \ name \ (DESTINATION_QUEUE_SIZE_COLUMN, 0)
+            val queueSize = KEYSPACE \ DESTINATIONS_FAMILY \ name \ (DESTINATION_QUEUE_SIZE_COLUMN, 0L)
             val destCount = KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ (BROKER_DESTINATION_COUNT, destinationCount.incrementAndGet)
             try {
               session.batch(Insert(topic) :: Insert(maxStore) :: Insert(queueSize) :: Insert(destCount))
@@ -112,12 +113,12 @@ class CassandraClient() {
   }
 
 
-  def getDestinations(): Set[ActiveMQDestination] = {
+  def getDestinations(): java.util.Set[ActiveMQDestination] = {
     val destinations = new HashSet[ActiveMQDestination]
     withSession {
       session =>
         session.list(KEYSPACE \ DESTINATIONS_FAMILY, KeyRange("", "", 10000)).foreach {
-          case (key, colomns) => {
+          case (key, cols) => {
             destinations.add(key.value)
           }
         }
@@ -130,14 +131,14 @@ class CassandraClient() {
   def deleteQueue(destination: ActiveMQDestination, destinationCount: AtomicInteger): Unit = {
     withSession {
       session =>
-        val msgs = KEYSPACE \ MESSAGES_FAMILY \ destination
-        val dest = KEYSPACE \ DESTINATIONS_FAMILY \ destination
-        val mids = KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination
-        val sids = KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination
-        val subs = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination
-        val count = KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ (BROKER_DESTINATION_COUNT, destinationCount.decrementAndGet)
+        session.remove(KEYSPACE \ MESSAGES_FAMILY \ destination)
+        session.remove(KEYSPACE \ DESTINATIONS_FAMILY \ destination)
+        session.remove(KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination)
+        session.remove(KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination)
+        session.remove(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination)
         try {
-          session.batch(Delete(msgs) :: Delete(dest) :: Delete(mids) :: Delete(sids) :: Delete(subs) :: Insert(count))
+          val count = KEYSPACE \ BROKER_FAMILY \ BROKER_KEY \ (BROKER_DESTINATION_COUNT, destinationCount.decrementAndGet)
+          session.insert(count)
         } catch {
           case e: RuntimeException =>
             destinationCount.incrementAndGet
@@ -157,8 +158,8 @@ class CassandraClient() {
     if (destinations == 0) {
       return max;
     }
-    var storeVal: long = 0
-    var broker: long = 0
+    var storeVal: Long = 0
+    var broker: Long = 0
     withSession {
       session =>
         session.list(KEYSPACE \ DESTINATIONS_FAMILY, new KeyRange("", "", 10000), ColumnPredicate(
@@ -182,7 +183,7 @@ class CassandraClient() {
     max
   }
 
-  def getStoreId(destination: ActiveMQDestination, id: MessageId): long = {
+  def getStoreId(destination: ActiveMQDestination, id: MessageId): Long = {
     withSession {
       session =>
         session.get(KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination \ id.toString) match {
@@ -195,20 +196,20 @@ class CassandraClient() {
     }
   }
 
-  def getMessage(destination: ActiveMQDestination, storeId: long): Array[byte] = {
+  def getMessage(destination: ActiveMQDestination, storeId: Long): Array[Byte] = {
     withSession {
       session =>
         session.get(KEYSPACE \ MESSAGES_FAMILY \ destination \ storeId) match {
           case Some(x) =>
             x.value
           case None =>
-            logger.error({"Message Not Found for destination:%s id:%i".format(destination, storeId)})
+            logger.error({"Message Not Found for destination:%s id:%s".format(destination, storeId)})
             throw new NotFoundException;
         }
     }
   }
 
-  def saveMessage(destination: ActiveMQDestination, id: long, messageId: MessageId, message: Array[byte], queueSize: AtomicLong, duplicateDetector: BloomFilter): Unit = {
+  def saveMessage(destination: ActiveMQDestination, id: Long, messageId: MessageId, message: Array[Byte], queueSize: AtomicLong, duplicateDetector: BloomFilter): Unit = {
     withSession {
       session =>
         if (duplicateDetector.isPresent(messageId.toString)) {
@@ -223,16 +224,18 @@ class CassandraClient() {
         }
 
         logger.debug({"Saving message with id:%d".format(id)});
+        logger.debug({"Saving message with messageId:%s".format(messageId.toString)});
         logger.debug({"Saving message with brokerSeq id:%d".format(messageId.getBrokerSequenceId())});
 
         val mesg = KEYSPACE \ MESSAGES_FAMILY \ destination \ (id, message)
-        val destQ = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_QUEUE_SIZE_COLUMN, queueSize.incrementAndGet)
+        val destQ = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_QUEUE_SIZE_COLUMN, bytes(queueSize.incrementAndGet))
         val destStore = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_MAX_STORE_SEQUENCE_COLUMN, id)
         val destBrok = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_MAX_BROKER_SEQUENCE_COLUMN, messageId.getBrokerSequenceId)
         val idx = KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination \ (messageId.toString, id)
         val storeId = KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination \ (id, "")
         try {
           session.batch(Insert(mesg) :: Insert(destQ) :: Insert(destStore) :: Insert(destBrok) :: Insert(idx) :: Insert(storeId));
+          duplicateDetector.add(messageId.toString)
         } catch {
           case e: RuntimeException =>
             queueSize.decrementAndGet
@@ -271,41 +274,43 @@ class CassandraClient() {
     }
   }
 
-  def getMessageCount(destination: ActiveMQDestination): long = {
+  def getMessageCount(destination: ActiveMQDestination): Int = {
     withSession {
       session =>
         session.get(KEYSPACE \ DESTINATIONS_FAMILY \ destination \ DESTINATION_QUEUE_SIZE_COLUMN) match {
           case Some(x) =>
-            x.value
+            long(x.value).intValue
           case None =>
             throw new RuntimeException("Count not found for destination" + destination);
         }
     }
   }
 
-  def recoverMessages(destination: ActiveMQDestination, batchPoint: AtomicLong, maxReturned: int): java.util.List[Array[byte]] = {
-    var start: String = ""
+  def recoverMessages(destination: ActiveMQDestination, batchPoint: AtomicLong, maxReturned: Int): java.util.List[Array[Byte]] = {
+    logger.debug({"recoverMessages(%s, %s,%s)".format(destination, batchPoint, maxReturned)})
+    var start: Array[Byte] = new Array[Byte](0)
     if (batchPoint.get != -1) {
       start = batchPoint.get
     }
-    val end = ""
-    val messages = new ArrayList[Array[byte]]
-    recoverMessagesFromTo(destination, start, end, maxReturned, messages, maxReturned)
+    val end: Array[Byte] = new Array[Byte](0)
+    val messages = new ArrayList[Array[Byte]]
+    recoverMessagesFromTo(destination, start, end, maxReturned, messages)
     messages
   }
 
-  private def recoverMessagesFromTo(key: String, start: String, end: String, limit: int, messages: ArrayList[Array[byte]], messagelimit: int): Unit = {
+  private def recoverMessagesFromTo(key: String, start: Array[Byte], end: Array[Byte], limit: Int, messages: ArrayList[Array[Byte]]): Unit = {
+    logger.debug({"recoverMessagesFrom(%s,%s,%s,%s,%s)".format(key, start, end, limit, messages.length)})
     withSession {
       session =>
         val range = RangePredicate(Some(start), Some(end), Order.Ascending, Some(limit))
         session.list(KEYSPACE \ MESSAGES_FAMILY \ key, range, Consistency.Quorum).foreach {
           col =>
-            if (messages.size < messagelimit) messages.add(col.value)
+            if (messages.size < limit) messages.add(col.value)
         }
     }
   }
 
-  def addSubscription(destination: ActiveMQDestination, subscriptionInfo: SubscriptionInfo, ack: long): Unit = {
+  def addSubscription(destination: ActiveMQDestination, subscriptionInfo: SubscriptionInfo, ack: Long): Unit = {
     withSession {
       session =>
         val supercolumnName = subscriptionSupercolumn(subscriptionInfo)
@@ -328,21 +333,123 @@ class CassandraClient() {
         subscriptionInfo.setClientId(clientId)
         subscriptionInfo.setSubscriptionName(subscriptionName)
         subscriptionInfo.setDestination(destination)
-        var dtype: Byte = if (destination.isTopic) ActiveMQDestination.TOPIC_TYPE else ActiveMQDestination.QUEUE_TYPE
-        session.get(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName)) 
+        session.get(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName)) match {
+          case Some(seq) => {
+            seq.foreach {
+              column => {
+                string(column.name) match {
+                  case SUBSCRIPTIONS_SELECTOR_SUBCOLUMN =>
+                    subscriptionInfo.setSelector(column.value)
+                  case SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN =>
+                    subscriptionInfo.setSubscribedDestination(column.value)
+                  case _ => None
+                }
+              }
+            }
+            subscriptionInfo
+          }
+          case None => {
+            logger.warn("lookupSubscription failed to find the subscription")
+            return null
+          }
+        }
 
     }
+  }
+
+  def lookupAllSubscriptions(destination: ActiveMQDestination): Array[SubscriptionInfo] = {
+    withSession {
+      session =>
+        val subs = new ListBuffer[SubscriptionInfo]
+        session.list(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination, EmptyPredicate, Consistency.Quorum).foreach {
+          case (superCol, columnList) => {
+            var key: String = superCol.value
+            logger.warn(string(columnList.length))
+            var subscriptionInfo = new SubscriptionInfo
+            subscriptionInfo.setClientId(getClientIdFromSubscriptionKey(key))
+            subscriptionInfo.setSubscriptionName(getSubscriptionNameFromSubscriptionKey(key))
+            subscriptionInfo.setDestination(destination)
+            columnList.foreach {
+              column => {
+                string(column.name) match {
+                  case SUBSCRIPTIONS_SELECTOR_SUBCOLUMN =>
+                    logger.debug("got selector col")
+                    subscriptionInfo.setSelector(column.value)
+                  case SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN =>
+                    logger.debug("got sub dest col")
+                    subscriptionInfo.setSubscribedDestination(column.value)
+                  case _ => None
+                }
+              }
+            }
+
+            subs + subscriptionInfo
+          }
+        }
+        subs.toArray
+    }
+
+  }
+
+  def acknowledge(destination: ActiveMQDestination, clientId: String, subscriptionName: String, id: MessageId): Unit = {
+    val lastAckStoreId: Long = getStoreId(destination, id);
+    val superCol = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName)
+    val ackCol = superCol \ (SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN, lastAckStoreId)
+    withSession {
+      session =>
+        session.insert(ackCol)
+    }
+  }
+
+  def deleteSubscription(destination: ActiveMQDestination, clientId: String, subscriptionName: String): Unit = {
+    val superCol = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName)
+    withSession {
+      session =>
+        session.remove(superCol)
+    }
+  }
+
+  def getMessageCountFrom(destination: ActiveMQDestination, storeId: Long): Int = {
+    withSession {
+      session =>
+        session.list(KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination, RangePredicate(Some(storeId), None, Order.Ascending, None)).size
+    }
+  }
+
+  def getLastAckStoreId(destination: ActiveMQDestination, clientId: String, subscriptionName: String): Int = {
+    withSession {
+      session =>
+        session.get(KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ getSubscriptionSuperColumnName(clientId, subscriptionName) \ SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN) match {
+          case Some(col) =>
+            long(col.value).intValue
+          case None => {
+            logger.debug("LastAckStoreId Not found, returning 0");
+            0
+          }
+
+        }
+    }
+  }
+
+  def getSubscriberId(clientId: String, subscriptionName: String): String = {
+    return getSubscriptionSuperColumnName(clientId, subscriptionName)
   }
 
 }
 
 object CassandraClient {
-  implicit def destinationKey(destination: ActiveMQDestination): String = {
+  val logger = Logger(this.getClass)
+
+  implicit def getDestinationKey(destination: ActiveMQDestination): String = {
     destination.getQualifiedName
   }
 
   implicit def destinationBytes(destination: ActiveMQDestination): Array[Byte] = {
-    bytes(destinationKey(destination))
+    bytes(getDestinationKey(destination))
+  }
+
+  implicit def bytesToDest(bytes: Array[Byte]): ActiveMQDestination = {
+    destinationFromKey(string(bytes))
   }
 
   implicit def destinationFromKey(key: String): ActiveMQDestination = {
@@ -364,48 +471,69 @@ object CassandraClient {
   }
 
 
-  private def getSubscriberId(clientId: String, subscriptionName: String): String = {
-    return getSubscriptionSuperColumnName(clientId, subscriptionName)
+  private def getClientIdFromSubscriptionKey(key: String): String = {
+    var split: Array[String] = key.split(SUBSCRIPTIONS_CLIENT_SUBSCRIPTION_DELIMITER)
+    return split(0)
   }
 
 
-
-
-  object Id {
-    val KEYSPACE = "MessageStore"
-    val BROKER_FAMILY = "Broker"
-    val BROKER_KEY = "Broker"
-    val BROKER_DESTINATION_COUNT = "destination-count"
-
-    val DESTINATIONS_FAMILY = "Destinations"
-    val DESTINATION_IS_TOPIC_COLUMN = "isTopic"
-    val DESTINATION_MAX_STORE_SEQUENCE_COLUMN = "max-store-sequence"
-    val DESTINATION_MAX_BROKER_SEQUENCE_COLUMN = "max-broker-sequence"
-    val DESTINATION_QUEUE_SIZE_COLUMN = "queue-size"
-
-
-    val MESSAGES_FAMILY = "Messages"
-
-    val MESSAGE_TO_STORE_ID_FAMILY = "MessageIdToStoreId"
-
-    val STORE_IDS_IN_USE_FAMILY = "StoreIdsInUse"
-
-
-    val SUBSCRIPTIONS_FAMILY = "Subscriptions"
-    val SUBSCRIPTIONS_SELECTOR_SUBCOLUMN = "selector"
-    val SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN = "lastMessageAck"
-    val SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN = "subscribedDestination";
-
-
-
-    /*Subscriptions Column Family Constants*/
-
-
-    val SUBSCRIPTIONS_CLIENT_SUBSCRIPTION_DELIMITER: String = "~~~~~"
-    val SUBSCRIPTIONS_DEFAULT_SUBSCRIPTION_NAME: String = "@NOT_SET@"
-
-
+  private def getSubscriptionNameFromSubscriptionKey(key: String): String = {
+    var split: Array[String] = key.split(SUBSCRIPTIONS_CLIENT_SUBSCRIPTION_DELIMITER)
+    if (split(1).equals(SUBSCRIPTIONS_DEFAULT_SUBSCRIPTION_NAME)) {
+      return null
+    }
+    else {
+      return split(1)
+    }
   }
 
+  def safeGetLong(bytes: Array[Byte]): Long = {
+    if (bytes.length != 8) {
+      logger.debug({"bytes length was %d, not 8, returning -1".format(bytes.length)})
+      return -1L
+    }
+    else {
+      return long(bytes)
+    }
+  }
 
+  val KEYSPACE = "MessageStore"
+  val BROKER_FAMILY = "Broker"
+  val BROKER_KEY = "Broker"
+  val BROKER_DESTINATION_COUNT = "destination-count"
+
+  val DESTINATIONS_FAMILY = "Destinations"
+  val DESTINATION_IS_TOPIC_COLUMN = "isTopic"
+  val DESTINATION_MAX_STORE_SEQUENCE_COLUMN = "max-store-sequence"
+  val DESTINATION_MAX_BROKER_SEQUENCE_COLUMN = "max-broker-sequence"
+  val DESTINATION_QUEUE_SIZE_COLUMN = "queue-size"
+
+
+  val MESSAGES_FAMILY = "Messages"
+
+  val MESSAGE_TO_STORE_ID_FAMILY = "MessageIdToStoreId"
+
+  val STORE_IDS_IN_USE_FAMILY = "StoreIdsInUse"
+
+
+  val SUBSCRIPTIONS_FAMILY = "Subscriptions"
+  val SUBSCRIPTIONS_SELECTOR_SUBCOLUMN = "selector"
+  val SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN = "lastMessageAck"
+  val SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN = "subscribedDestination";
+
+
+
+  /*Subscriptions Column Family Constants*/
+
+
+  val SUBSCRIPTIONS_CLIENT_SUBSCRIPTION_DELIMITER: String = "~~~~~"
+  val SUBSCRIPTIONS_DEFAULT_SUBSCRIPTION_NAME: String = "@NOT_SET@"
+
+}
+
+object CassandraClientUtil {
+  def getDestinationKey(destination: ActiveMQDestination): String = {
+    CassandraClient.getDestinationKey(destination)
+  }
+  val MESSAGES_FAMILY = CassandraClient.MESSAGES_FAMILY
 }

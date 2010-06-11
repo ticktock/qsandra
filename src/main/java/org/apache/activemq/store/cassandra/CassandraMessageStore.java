@@ -113,7 +113,7 @@ public class CassandraMessageStore extends AbstractMessageStore {
         int count = getAdapter().getCassandra().getMessageCount(destination);
         queueSize.set(count);
         if (log.isDebugEnabled()) {
-            log.debug("Destination: {} has {} ", CassandraUtils.getDestinationKey(destination), queueSize.get());
+            log.debug("Destination: {} has {} ", CassandraClientUtil.getDestinationKey(destination), queueSize.get());
         }
         duplicateDetector = getAdapter().getCassandra().getMessageIdFilterFor(destination, queueSize.get());
     }
@@ -121,8 +121,8 @@ public class CassandraMessageStore extends AbstractMessageStore {
     public void stop() throws Exception {
         if (log.isDebugEnabled()) {
             log.debug("stop()");
-            log.debug("Destination: {} has {} ", CassandraUtils.getDestinationKey(destination), queueSize.get());
-            log.debug("Store: {} has {} ", CassandraUtils.getDestinationKey(destination), getAdapter().getCassandra().getMessageCount(destination));
+            log.debug("Destination: {} has {} ", CassandraClientUtil.getDestinationKey(destination), queueSize.get());
+            log.debug("Store: {} has {} ", CassandraClientUtil.getDestinationKey(destination), getAdapter().getCassandra().getMessageCount(destination));
         }
     }
 
