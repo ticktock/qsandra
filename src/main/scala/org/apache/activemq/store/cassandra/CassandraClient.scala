@@ -8,20 +8,18 @@ import CassandraClient._
 import org.apache.cassandra.utils.BloomFilter
 import grizzled.slf4j.Logger
 import org.apache.activemq.store.cassandra.{DestinationMaxIds => Max}
-import org.apache.activemq.store.cassandra._
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
 import org.apache.activemq.command.{SubscriptionInfo, MessageId, ActiveMQDestination}
 import collection.jcl.{ArrayList, HashSet, Set}
-import com.shorrockin.cascal.model.{SuperColumn, StandardKey, Key, Column}
-import collection.mutable.ListBuffer
-import org.apache.cassandra.thrift.{ConsistencyLevel, NotFoundException}
+import org.apache.cassandra.thrift.{NotFoundException}
+import java.lang.String
+import collection.mutable.{HashMap, ListBuffer}
 
 class CassandraClient() {
-
-
   @BeanProperty var cassandraHost: String = _
   @BeanProperty var cassandraPort: Int = _
   @BeanProperty var cassandraTimeout: Int = _
+  @BeanProperty var verifyKeyspace: Boolean = true;
 
 
   protected var pool: SessionPool = null
@@ -30,6 +28,9 @@ class CassandraClient() {
     val params = new PoolParams(20, ExhaustionPolicy.Fail, 500L, 6, 2)
     var hosts = Host(cassandraHost, cassandraPort, cassandraTimeout) :: Nil
     pool = new SessionPool(hosts, params, Consistency.Quorum)
+    if (verifyKeyspace) {
+      verifyMessageStoreKeyspace
+    }
   }
 
   def stop() = {
@@ -37,7 +38,7 @@ class CassandraClient() {
   }
 
   protected def withSession[E](block: Session => E): E = {
-    pool.borrow{session => block(session)}
+    pool.borrow {session => block(session)}
   }
 
   def getDestinationCount(): Int = {
@@ -430,6 +431,53 @@ class CassandraClient() {
     return getSubscriptionSuperColumnName(clientId, subscriptionName)
   }
 
+  def verifyMessageStoreKeyspace(): Unit = {
+    withSession {
+      session =>
+
+        val keyspace = convertMap(session.client.describe_keyspace(KEYSPACE))
+
+        val stdCols: List[String] = MESSAGES_FAMILY :: STORE_IDS_IN_USE_FAMILY :: DESTINATIONS_FAMILY :: BROKER_FAMILY :: MESSAGE_TO_STORE_ID_FAMILY :: Nil
+        val superCols: List[String] = SUBSCRIPTIONS_FAMILY :: Nil
+        val allCols: List[String] = stdCols ++ superCols
+
+
+        allCols.foreach {
+          family =>
+            keyspace.get(family) match {
+              case Some(x) => None
+              case None => throw new RuntimeException("ColumnFamily: %s missing from keyspace".format(family))
+            }
+        }
+
+        stdCols.foreach {
+          family =>
+            keyspace.get(family) match {
+              case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
+                case Some(colType) => colType match {
+                  case DESCRIBE_CF_TYPE_STANDARD => None
+                  case _ => throw new RuntimeException("Type of the ColumnFamily was not expected to be:%s".format(colType))
+                }
+                case None => throw new RuntimeException("Type wasnt part of the column description")
+              }
+            }
+        }
+
+        superCols.foreach {
+          family =>
+            keyspace.get(family) match {
+              case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
+                case Some(colType) => colType match {
+                  case DESCRIBE_CF_TYPE_SUPER => None
+                  case _ => throw new RuntimeException("Type of the ColumnFamily was not expected to be:%s".format(colType))
+                }
+                case None => throw new RuntimeException("Type wasnt part of the column description")
+              }
+            }
+        }
+    }
+  }
+
 }
 
 object CassandraClient {
@@ -516,6 +564,10 @@ object CassandraClient {
   val SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN = "lastMessageAck"
   val SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN = "subscribedDestination";
 
+
+  val DESCRIBE_CF_TYPE = "Type"
+  val DESCRIBE_CF_TYPE_STANDARD = "Standard"
+  val DESCRIBE_CF_TYPE_SUPER = "Super"
 
 
   /*Subscriptions Column Family Constants*/
