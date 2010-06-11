@@ -349,7 +349,7 @@ class CassandraClient() {
             subscriptionInfo
           }
           case None => {
-            logger.warn("lookupSubscription failed to find the subscription")
+            logger.info("lookupSubscription failed to find the subscription")
             return null
           }
         }
