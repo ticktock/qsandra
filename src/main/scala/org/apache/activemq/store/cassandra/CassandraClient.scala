@@ -452,7 +452,7 @@ class CassandraClient() {
 
         stdCols.foreach {
           family =>
-            keyspace.get(family) match {
+            (keyspace.get(family): @unchecked) match {
               case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
                 case Some(colType) => colType match {
                   case DESCRIBE_CF_TYPE_STANDARD => None
@@ -465,7 +465,7 @@ class CassandraClient() {
 
         superCols.foreach {
           family =>
-            keyspace.get(family) match {
+            (keyspace.get(family): @unchecked) match {
               case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
                 case Some(colType) => colType match {
                   case DESCRIBE_CF_TYPE_SUPER => None
