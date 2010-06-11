@@ -91,12 +91,32 @@ This is a much simpler configuration. If a MasterElector is not set on the Persi
 
 
 ##Building
-There is a maven repo at http://maven.shorrockin.com/ that thankfully unpacks and deploys all the cassandra dependencies, so
+There is a maven repo at [http://maven.shorrockin.com/](http://maven.shorrockin.com/) that thankfully unpacks and deploys all the cassandra dependencies, so
 
         mvn clean install
 
 should do it.
 
 ##Installing
-If you have a standard activemq installation, take the assembly (.zip or .tar.gz) produced by mvn install, place it in the root of your
-activemq install and unpack. This will place the necessary jars in lib/optional. YOu can now include this persistence adapter in your broker configuration.
+If you have a standard activemq installation, take the assembly (.zip or .tar.gz) produced by mvn install, or downloaded from
+[http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz](http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz) or
+[http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip](http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip)
+
+and place it in the root of your activemq install and unpack. This will place the necessary jars in lib/optional. YOu can now include this persistence adapter in your broker configuration.
+
+If using maven, and running an embedded activemq broker, you can get the adapter as a maven dependncy by adding the following repository and dependency to your pom
+
+Add to repositories:
+        <repository>
+            <id>ticktock</id>
+            <name>Ticktock Repository</name>
+            <url>http://www.ticktock.com/maven/</url>
+        </repository>
+
+Add to dependencies:
+        <dependency>
+            <groupId>com.tickock</groupId>
+            <artifactId>qsandra</artifactId>
+            <version>1.1-SNAPSHOT</version>
+        </dependency>
+
