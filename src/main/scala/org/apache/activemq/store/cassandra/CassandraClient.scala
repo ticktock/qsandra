@@ -17,11 +17,11 @@ import collection.mutable.ListBuffer
 import org.apache.cassandra.thrift.{ConsistencyLevel, NotFoundException}
 
 class CassandraClient() {
+
+
   @BeanProperty var cassandraHost: String = _
   @BeanProperty var cassandraPort: Int = _
   @BeanProperty var cassandraTimeout: Int = _
-  @BeanProperty var consistencyLevel: ConsistencyLevel = _
-
 
 
   protected var pool: SessionPool = null
@@ -37,12 +37,7 @@ class CassandraClient() {
   }
 
   protected def withSession[E](block: Session => E): E = {
-    val session = pool.checkout
-    try {
-      block(session)
-    } finally {
-      pool.checkin(session)
-    }
+    pool.borrow{session => block(session)}
   }
 
   def getDestinationCount(): Int = {
@@ -535,5 +530,6 @@ object CassandraClientUtil {
   def getDestinationKey(destination: ActiveMQDestination): String = {
     CassandraClient.getDestinationKey(destination)
   }
+
   val MESSAGES_FAMILY = CassandraClient.MESSAGES_FAMILY
 }

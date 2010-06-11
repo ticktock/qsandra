@@ -23,8 +23,7 @@ public class CassandraStoreBrokerTest extends BrokerTest {
         CassandraClient cassandraClient = new CassandraClient();
         cassandraClient.setCassandraHost("localhost");
         cassandraClient.setCassandraPort(EmbeddedServicesTest.getCassandraPort());
-        cassandraClient.setConsistencyLevel(ConsistencyLevel.QUORUM);
-
+       
         adapter.setCassandraClient(cassandraClient);
         brokerService.setPersistenceAdapter(adapter);
         adapter.setBrokerService(brokerService);

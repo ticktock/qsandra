@@ -68,7 +68,6 @@ public class CassandraStoreOrderTest extends StoreOrderTest {
         CassandraClient cassandraClient = new CassandraClient();
         cassandraClient.setCassandraHost("localhost");
         cassandraClient.setCassandraPort(EmbeddedServicesTest.getCassandraPort());
-        cassandraClient.setConsistencyLevel(ConsistencyLevel.QUORUM);
         cassandraClient.start();
         ZooKeeperMasterElector masterElector = new ZooKeeperMasterElector();
         masterElector.setZookeeperConnectString(EmbeddedServicesTest.getZookeeperConnectString());

@@ -20,8 +20,8 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
          http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core-5.3.0.xsd">
 
-     <bean id="services" class="org.apache.activemq.store.cassandra.EmbeddedServicesTest" init-method="setup"
-           destroy-method="tearDown">
+    <bean id="services" class="org.apache.activemq.store.cassandra.EmbeddedServicesTest" init-method="setup"
+          destroy-method="tearDown">
     </bean>
 
 
@@ -46,7 +46,6 @@
     <bean id="cassandraClient" class="org.apache.activemq.store.cassandra.CassandraClient" depends-on="services">
         <property name="cassandraHost" value="localhost"/>
         <property name="cassandraPort" value="${thrift.port}"/>
-        <property name="consistencyLevel" value="QUORUM"/>
     </bean>
 
     <bean id="masterElector" class="org.apache.activemq.store.cassandra.ZooKeeperMasterElector" depends-on="services">
@@ -58,5 +57,5 @@
         <property name="brokerURL" value="tcp://localhost:60001"/>
     </bean>
 
-    
+
 </beans>

@@ -26,7 +26,6 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
         CassandraClient client = new CassandraClient();
         client.setCassandraHost(cassandraHost);
         client.setCassandraPort(cassandraPort);
-        client.setConsistencyLevel(consistencyLevel);
         adapter.setCassandraClient(client);
         ZooKeeperMasterElector zookeeperMasterElector = new ZooKeeperMasterElector();
         zookeeperMasterElector.setZookeeperConnectString(zookeeperConnectString);
@@ -58,11 +57,5 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
         this.zookeeperConnectString = zookeeperConnectString;
     }
 
-    public ConsistencyLevel getConsistencyLevel() {
-        return consistencyLevel;
-    }
 
-    public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
-    }
 }

@@ -30,7 +30,6 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         client = new CassandraClient();
         client.setCassandraHost("localhost");
         client.setCassandraPort(getCassandraPort());
-        client.setConsistencyLevel(ConsistencyLevel.QUORUM);
         client.start();
 
     }
