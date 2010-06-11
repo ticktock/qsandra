@@ -104,9 +104,9 @@ If you have a standard activemq installation, take the assembly (.zip or .tar.gz
 
 [http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip](http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip)
 
-and place it in the root of your activemq install and unpack. This will place the necessary jars in lib/optional. YOu can now include this persistence adapter in your broker configuration.
+and place it in the root of your activemq install and unpack. This will place the necessary jars in lib/optional. You can now include this persistence adapter in your broker configuration.
 
-If using maven, and running an embedded activemq broker, you can get the adapter as a maven dependncy by adding the following repository and dependency to your pom
+If using maven, and running an embedded activemq broker, you can get the adapter as a maven dependency by adding the following repository and dependency to your pom
 
 Add to repositories:
         <repository>
