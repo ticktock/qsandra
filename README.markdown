@@ -100,9 +100,9 @@ should do it.
 ##Installing
 If you have a standard activemq installation, take the assembly (.zip or .tar.gz) produced by mvn install, or downloaded from
 
-[http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz](http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz) or
+[http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz](http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz) or
 
-[http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip](http://http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip)
+[http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip](http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip)
 
 and place it in the root of your activemq install and unpack. This will place the necessary jars in lib/optional. YOu can now include this persistence adapter in your broker configuration.
 
