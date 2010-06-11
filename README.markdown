@@ -96,3 +96,7 @@ There is a maven repo at http://maven.shorrockin.com/ that thankfully unpacks an
         mvn clean install
 
 should do it.
+
+##Installing
+If you have a standard activemq installation, take the assembly (.zip or .tar.gz) produced by mvn install, place it in the root of your
+activemq install and unpack. This will place the necessary jars in lib/optional. YOu can now include this persistence adapter in your broker configuration.
