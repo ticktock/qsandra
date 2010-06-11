@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>qsandra</groupId>
+    <groupId>ticktock</groupId>
     <artifactId>qsandra</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>1.0</version>
 
     <properties>
         <activemq.version>5.3.1</activemq.version>
@@ -109,6 +109,8 @@
             </plugin>
         </plugins>
     </build>
+
+    
 
     <dependencies>
 
@@ -245,12 +247,6 @@
             <artifactId>json-simple</artifactId>
             <version>${json.simple.version}</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>zookeeper</artifactId>
-            <version>3.3.1</version>
         </dependency>
 
         <dependency>
