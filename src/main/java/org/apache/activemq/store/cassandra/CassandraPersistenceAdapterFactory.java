@@ -16,9 +16,7 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
     private Logger log = Logger.getLogger(CassandraPersistenceAdapterFactory.class);
     private String cassandraHost;
     private int cassandraPort;
-    private Cassandra.Client cassandra;
     private String zookeeperConnectString;
-    private ConsistencyLevel consistencyLevel;
 
 
     public PersistenceAdapter createPersistenceAdapter() throws IOException {
