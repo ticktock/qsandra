@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>ticktock</groupId>
+    <groupId>com.ticktock</groupId>
     <artifactId>qsandra</artifactId>
     <version>1.1-SNAPSHOT</version>
 
@@ -131,6 +131,12 @@
                         <id>attach-sources</id>
                         <goals>
                             <goal>jar</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>attach-test-sources</id>
+                        <goals>
+                            <goal>test-jar</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -352,5 +358,17 @@
         </dependency>
 
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>ticktock</id>
+            <url>http://www.ticktock.com/maven</url>
+        </repository>
+        <snapshotRepository>
+            <id>ticktock</id>
+            <url>http://www.ticktock.com/maven</url>
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
 
 </project>

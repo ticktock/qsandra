@@ -14,10 +14,6 @@
                  <exclude>log4j*</exclude>
                  <exclude>commons-pool*</exclude>
                  <exclude>jline*</exclude>
-                 <exclude>jms*</exclude>
-                 <exclude>jmx*</exclude>
-                 <exclude>activation*</exclude>
-                 <exclude>mail*</exclude>
              </excludes>
         </dependencySet>
     </dependencySets>
