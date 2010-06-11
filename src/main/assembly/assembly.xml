@@ -1,0 +1,24 @@
+<assembly>
+    <id>install</id>
+    <baseDirectory>qsandra-install</baseDirectory>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <formats>
+        <format>zip</format>
+        <format>tar.gz</format>
+    </formats>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib/optional</outputDirectory>
+             <excludes>
+                 <exclude>junit*</exclude>
+                 <exclude>log4j*</exclude>
+                 <exclude>commons-pool*</exclude>
+                 <exclude>jline*</exclude>
+                 <exclude>jms*</exclude>
+                 <exclude>jmx*</exclude>
+                 <exclude>activation*</exclude>
+                 <exclude>mail*</exclude>
+             </excludes>
+        </dependencySet>
+    </dependencySets>
+</assembly>

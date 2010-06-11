@@ -50,7 +50,7 @@ public class CassandraTopicMessageStore extends CassandraMessageStore implements
 
     @Override
     public void recoverNextMessages(String clientId, String subscriptionName, int maxReturned, MessageRecoveryListener listener) throws Exception {
-        String subcriberId = CassandraClient.getSubscriberId(clientId, subscriptionName);
+        String subcriberId = getAdapter().getCassandra().getSubscriberId(clientId, subscriptionName);
         AtomicLong last = subscriberLastMessageMap.get(subcriberId);
         if (last == null) {
             long lastAcked = getAdapter().getCassandra().getLastAckStoreId(getDestination(), clientId, subscriptionName);
@@ -81,7 +81,7 @@ public class CassandraTopicMessageStore extends CassandraMessageStore implements
 
     @Override
     public void resetBatching(String clientId, String subscriptionName) {
-        String id = CassandraClient.getSubscriberId(clientId, subscriptionName);
+        String id = getAdapter().getCassandra().getSubscriberId(clientId, subscriptionName);
         subscriberLastMessageMap.remove(id);
     }
 

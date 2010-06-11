@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,7 +30,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         client = new CassandraClient();
         client.setCassandraHost("localhost");
         client.setCassandraPort(getCassandraPort());
-        client.setConsistencyLevel(ConsistencyLevel.QUORUM);
+        client.start();
 
     }
 
@@ -69,7 +68,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         try {
             byte[] rte2 = client.getMessage(queue, 1);
             assertFalse(new String(fakeMessage).equals(new String(rte2)));
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             assertTrue(e.getCause() instanceof NotFoundException);
         }
         assertEquals(0, client.getMessageCount(queue));
@@ -121,7 +120,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
             client.saveMessage(queue, i, messageId, fakeMessage, count, dups);
             log.debug("saved:{}", i);
         }
-        ColumnParent p = new ColumnParent(CassandraIdentifier.MESSAGES_FAMILY.string());
+        ColumnParent p = new ColumnParent(CassandraClientUtil.MESSAGES_FAMILY());
         byte[] start = new byte[0];
         byte[] end = new byte[0];
         byte[] lastCol = new byte[0];
@@ -131,7 +130,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         predicate.setSlice_range(range);
 
 
-        List<ColumnOrSuperColumn> orSuperColumns = client.getCassandraConnection().get_slice(CassandraIdentifier.KEYSPACE.string(), CassandraUtils.getDestinationKey(queue), p, predicate, ConsistencyLevel.QUORUM);
+        /*  List<ColumnOrSuperColumn> orSuperColumns = client.getCassandraConnection().get_slice(CassandraIdentifier.KEYSPACE.string(), CassandraUtils.getDestinationKey(queue), p, predicate, ConsistencyLevel.QUORUM);
         for (ColumnOrSuperColumn orSuperColumn : orSuperColumns) {
             logColumnName(orSuperColumn, Long.class);
         }
@@ -140,7 +139,7 @@ public class CassandraClientTest extends EmbeddedServicesTest {
         orSuperColumns = client.getCassandraConnection().get_slice(CassandraIdentifier.KEYSPACE.string(), CassandraUtils.getDestinationKey(queue), p, predicate, ConsistencyLevel.QUORUM);
         for (ColumnOrSuperColumn orSuperColumn : orSuperColumns) {
             logColumnName(orSuperColumn, Long.class);
-        }
+        }*/
     }
 
 

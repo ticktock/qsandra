@@ -107,7 +107,6 @@ public class SendAndReceiveTest extends EmbeddedServicesTest {
             CassandraClient cassandraClient = new CassandraClient();
             cassandraClient.setCassandraHost("localhost");
             cassandraClient.setCassandraPort(getCassandraPort());
-            cassandraClient.setConsistencyLevel(ConsistencyLevel.QUORUM);
             ZooKeeperMasterElector elector = new ZooKeeperMasterElector();
             elector.setZookeeperConnectString(getZookeeperConnectString());
             adapter.setCassandraClient(cassandraClient);

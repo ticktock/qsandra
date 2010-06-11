@@ -9,8 +9,9 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
 import java.util.Properties;
 
 /**
@@ -119,9 +120,9 @@ public class EmbeddedServicesTest {
 
     private Object get(byte[] bytes, Class type) {
         if (type.equals(String.class)) {
-            return CassandraUtils.getString(bytes);
+            return getString(bytes);
         } else if (type.equals(Long.class)) {
-            return CassandraUtils.getLong(bytes);
+            return getLong(bytes);
         } else {
             return "UnsupportedType for conversion";
         }
@@ -129,6 +130,21 @@ public class EmbeddedServicesTest {
 
     public void logColumnNameAndValue(ColumnOrSuperColumn cos, Class nameType, Class valueType) {
         log.debug("column:{} value:{}", getName(cos, nameType), getValue(cos, valueType));
+    }
+
+    public static String getString(byte[] bytes) {
+        try {
+            return new String(bytes, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static long getLong(byte[] bytes) {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+        LongBuffer lBuffer = byteBuffer.asLongBuffer();
+        return lBuffer.get();
     }
 
 

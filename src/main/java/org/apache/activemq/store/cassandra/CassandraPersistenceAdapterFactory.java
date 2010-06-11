@@ -16,9 +16,7 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
     private Logger log = Logger.getLogger(CassandraPersistenceAdapterFactory.class);
     private String cassandraHost;
     private int cassandraPort;
-    private Cassandra.Client cassandra;
     private String zookeeperConnectString;
-    private ConsistencyLevel consistencyLevel;
 
 
     public PersistenceAdapter createPersistenceAdapter() throws IOException {
@@ -26,7 +24,6 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
         CassandraClient client = new CassandraClient();
         client.setCassandraHost(cassandraHost);
         client.setCassandraPort(cassandraPort);
-        client.setConsistencyLevel(consistencyLevel);
         adapter.setCassandraClient(client);
         ZooKeeperMasterElector zookeeperMasterElector = new ZooKeeperMasterElector();
         zookeeperMasterElector.setZookeeperConnectString(zookeeperConnectString);
@@ -58,11 +55,5 @@ public class CassandraPersistenceAdapterFactory implements PersistenceAdapterFac
         this.zookeeperConnectString = zookeeperConnectString;
     }
 
-    public ConsistencyLevel getConsistencyLevel() {
-        return consistencyLevel;
-    }
 
-    public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
-    }
 }
