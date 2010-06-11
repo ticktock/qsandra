@@ -87,7 +87,7 @@ class CassandraClient() {
       session =>
         session.get(KEYSPACE \ DESTINATIONS_FAMILY \ name \ DESTINATION_IS_TOPIC_COLUMN) match {
           case Some(x) =>
-            logger.info({"Destination %s exists".format(name)})
+            logger.info("Destination %s exists".format(name))
             return false
           case None =>
             val topic = KEYSPACE \ DESTINATIONS_FAMILY \ name \ (DESTINATION_IS_TOPIC_COLUMN, isTopic)
@@ -185,7 +185,7 @@ class CassandraClient() {
           case Some(x) =>
             x.value
           case None =>
-            logger.error({"Store Id not found in destination %s for id %s".format(destination, id)})
+            logger.error("Store Id not found in destination %s for id %s".format(destination, id))
             throw new RuntimeException("Store Id not found");
         }
     }
@@ -198,7 +198,7 @@ class CassandraClient() {
           case Some(x) =>
             x.value
           case None =>
-            logger.error({"Message Not Found for destination:%s id:%s".format(destination, storeId)})
+            logger.error("Message Not Found for destination:%s id:%s".format(destination, storeId))
             throw new RuntimeException(new NotFoundException);
         }
     }
@@ -210,7 +210,7 @@ class CassandraClient() {
         if (duplicateDetector.isPresent(messageId.toString)) {
           session.get(KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination \ messageId.toString) match {
             case Some(x) => {
-              logger.warn({"Duplicate Message Save recieved from broker for %s...ignoring".format(messageId)})
+              logger.warn("Duplicate Message Save recieved from broker for %s...ignoring".format(messageId))
               return
             }
             case None =>
@@ -218,9 +218,9 @@ class CassandraClient() {
           }
         }
 
-        logger.debug({"Saving message with id:%d".format(id)});
-        logger.debug({"Saving message with messageId:%s".format(messageId.toString)});
-        logger.debug({"Saving message with brokerSeq id:%d".format(messageId.getBrokerSequenceId())});
+        logger.debug("Saving message with id:%d".format(id));
+        logger.debug("Saving message with messageId:%s".format(messageId.toString));
+        logger.debug("Saving message with brokerSeq id:%d".format(messageId.getBrokerSequenceId()));
 
         val mesg = KEYSPACE \ MESSAGES_FAMILY \ destination \ (id, message)
         val destQ = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_QUEUE_SIZE_COLUMN, bytes(queueSize.incrementAndGet))
@@ -234,7 +234,7 @@ class CassandraClient() {
         } catch {
           case e: RuntimeException =>
             queueSize.decrementAndGet
-            logger.error({"Exception saving message"}, e)
+            logger.error("Exception saving message", e)
             throw e
         }
 
@@ -256,7 +256,7 @@ class CassandraClient() {
     } catch {
       case e: RuntimeException =>
         queueSize.incrementAndGet
-        logger.error({"Exception saving message"}, e)
+        logger.error("Exception saving message", e)
         throw e
     }
   }
@@ -282,7 +282,7 @@ class CassandraClient() {
   }
 
   def recoverMessages(destination: ActiveMQDestination, batchPoint: AtomicLong, maxReturned: Int): java.util.List[Array[Byte]] = {
-    logger.debug({"recoverMessages(%s, %s,%s)".format(destination, batchPoint, maxReturned)})
+    logger.debug("recoverMessages(%s, %s,%s)".format(destination, batchPoint, maxReturned))
     var start: Array[Byte] = new Array[Byte](0)
     if (batchPoint.get != -1) {
       start = batchPoint.get
@@ -294,7 +294,7 @@ class CassandraClient() {
   }
 
   private def recoverMessagesFromTo(key: String, start: Array[Byte], end: Array[Byte], limit: Int, messages: ArrayList[Array[Byte]]): Unit = {
-    logger.debug({"recoverMessagesFrom(%s,%s,%s,%s,%s)".format(key, start, end, limit, messages.length)})
+    logger.debug("recoverMessagesFrom(%s,%s,%s,%s,%s)".format(key, start, end, limit, messages.length))
     withSession {
       session =>
         val range = RangePredicate(Some(start), Some(end), Order.Ascending, Some(limit))
@@ -484,7 +484,7 @@ object CassandraClient {
 
   def safeGetLong(bytes: Array[Byte]): Long = {
     if (bytes.length != 8) {
-      logger.debug({"bytes length was %d, not 8, returning -1".format(bytes.length)})
+      logger.debug("bytes length was %d, not 8, returning -1".format(bytes.length))
       return -1L
     }
     else {
