@@ -2,7 +2,7 @@ package org.apache.activemq.store.cassandra
 
 import com.shorrockin.cascal.session._
 import com.shorrockin.cascal.utils.Conversions._
-import collection.jcl.Conversions._
+import collection.JavaConversions._
 import reflect.BeanProperty
 import CassandraClient._
 import org.apache.cassandra.utils.BloomFilter
@@ -10,10 +10,10 @@ import grizzled.slf4j.Logger
 import org.apache.activemq.store.cassandra.{DestinationMaxIds => Max}
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
 import org.apache.activemq.command.{SubscriptionInfo, MessageId, ActiveMQDestination}
-import collection.jcl.{ArrayList, HashSet, Set}
 import org.apache.cassandra.thrift.{NotFoundException}
 import java.lang.String
 import collection.mutable.{HashMap, ListBuffer}
+import java.util.{HashSet, ArrayList}
 
 class CassandraClient() {
   @BeanProperty var cassandraHost: String = _
@@ -313,10 +313,10 @@ class CassandraClient() {
         val supercolumn = KEYSPACE \\ SUBSCRIPTIONS_FAMILY \ destination \ supercolumnName
         val subdest = supercolumn \ (SUBSCRIPTIONS_SUB_DESTINATION_SUBCOLUMN, subscriptionInfo.getSubscribedDestination)
         val ackcol = supercolumn \ (SUBSCRIPTIONS_LAST_ACK_SUBCOLUMN, ack)
-        var list = Insert(subdest) :: Insert(ackcol)
+        var list:List[Operation] = Insert(subdest) :: Insert(ackcol)
         if (subscriptionInfo.getSelector != null) {
           val selcolopt = supercolumn \ (SUBSCRIPTIONS_SELECTOR_SUBCOLUMN, subscriptionInfo.getSelector)
-          list.add(Insert(selcolopt))
+          list = Insert(selcolopt) :: list
         }
         session.batch(list)
     }
@@ -435,7 +435,7 @@ class CassandraClient() {
     withSession {
       session =>
 
-        val keyspace = convertMap(session.client.describe_keyspace(KEYSPACE))
+        val keyspace = asMap(session.client.describe_keyspace(KEYSPACE))
 
         val stdCols: List[String] = MESSAGES_FAMILY :: STORE_IDS_IN_USE_FAMILY :: DESTINATIONS_FAMILY :: BROKER_FAMILY :: MESSAGE_TO_STORE_ID_FAMILY :: Nil
         val superCols: List[String] = SUBSCRIPTIONS_FAMILY :: Nil
@@ -453,7 +453,7 @@ class CassandraClient() {
         stdCols.foreach {
           family =>
             (keyspace.get(family): @unchecked) match {
-              case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
+              case Some(map) => asMap(map).get(DESCRIBE_CF_TYPE) match {
                 case Some(colType) => colType match {
                   case DESCRIBE_CF_TYPE_STANDARD => None
                   case _ => throw new RuntimeException("Type of the ColumnFamily was not expected to be:%s".format(colType))
@@ -466,7 +466,7 @@ class CassandraClient() {
         superCols.foreach {
           family =>
             (keyspace.get(family): @unchecked) match {
-              case Some(map) => convertMap(map).get(DESCRIBE_CF_TYPE) match {
+              case Some(map) => asMap(map).get(DESCRIBE_CF_TYPE) match {
                 case Some(colType) => colType match {
                   case DESCRIBE_CF_TYPE_SUPER => None
                   case _ => throw new RuntimeException("Type of the ColumnFamily was not expected to be:%s".format(colType))
