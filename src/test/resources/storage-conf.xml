@@ -119,6 +119,19 @@
             <ColumnFamily Name="MessageIdToStoreId" CompareWith="UTF8Type"/>
 
 
+
+
+            <!--
+            row key: producerId
+
+            ProducerSequenceIndex :{
+                producerId:{
+                    producerSeq:byte[1]
+                }
+            }
+            -->
+            <ColumnFamily Name="ProducerSequenceIndex" CompareWith="LongType" />
+            
             <!--
             row key: destinationName
             Subscriptions : {

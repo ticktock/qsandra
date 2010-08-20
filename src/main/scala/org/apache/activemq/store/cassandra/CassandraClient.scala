@@ -9,11 +9,13 @@ import org.apache.cassandra.utils.BloomFilter
 import grizzled.slf4j.Logger
 import org.apache.activemq.store.cassandra.{DestinationMaxIds => Max}
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
-import org.apache.activemq.command.{SubscriptionInfo, MessageId, ActiveMQDestination}
 import org.apache.cassandra.thrift.{NotFoundException}
 import java.lang.String
 import collection.mutable.{HashMap, ListBuffer}
 import java.util.{HashSet, ArrayList}
+import org.apache.activemq.command.{ProducerId, SubscriptionInfo, MessageId, ActiveMQDestination}
+import com.shorrockin.cascal.model.{StandardKey, Column}
+import collection.Seq
 
 class CassandraClient() {
   @BeanProperty var cassandraHost: String = _
@@ -229,8 +231,9 @@ class CassandraClient() {
         val destBrok = KEYSPACE \ DESTINATIONS_FAMILY \ destination \ (DESTINATION_MAX_BROKER_SEQUENCE_COLUMN, messageId.getBrokerSequenceId)
         val idx = KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination \ (messageId.toString, id)
         val storeId = KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination \ (id, "")
+        val prodSeq = KEYSPACE \ PRODUCER_SEQUENCE_FAMILY \ messageId.getProducerId.toString \ (messageId.getProducerSequenceId, "")
         try {
-          session.batch(Insert(mesg) :: Insert(destQ) :: Insert(destStore) :: Insert(destBrok) :: Insert(idx) :: Insert(storeId));
+          session.batch(Insert(mesg) :: Insert(destQ) :: Insert(destStore) :: Insert(destBrok) :: Insert(idx) :: Insert(storeId) :: Insert(prodSeq));
           duplicateDetector.add(messageId.toString)
         } catch {
           case e: RuntimeException =>
@@ -249,10 +252,11 @@ class CassandraClient() {
     val mes = KEYSPACE \ MESSAGES_FAMILY \ destination
     val store = KEYSPACE \ STORE_IDS_IN_USE_FAMILY \ destination
     val idx = KEYSPACE \ MESSAGE_TO_STORE_ID_FAMILY \ destination
+    val prod = KEYSPACE \ PRODUCER_SEQUENCE_FAMILY \ id.getProducerId.toString
     try {
       withSession {
         session =>
-          session.batch(Delete(mes, ColumnPredicate(col :: Nil)) :: Delete(store, ColumnPredicate(col :: Nil)) :: Delete(idx, ColumnPredicate(id.toString :: Nil)) :: Insert(dest))
+          session.batch(Delete(mes, ColumnPredicate(col :: Nil)) :: Delete(store, ColumnPredicate(col :: Nil)) :: Delete(prod, ColumnPredicate(id.getProducerSequenceId:: Nil)) :: Delete(idx, ColumnPredicate(id.toString :: Nil)) :: Insert(dest))
       }
     } catch {
       case e: RuntimeException =>
@@ -281,6 +285,16 @@ class CassandraClient() {
         }
     }
   }
+
+  def getMaxProducerSequenceId(id: ProducerId):Long = {
+     withSession {
+       session =>
+        val list: Seq[Column[StandardKey]] = session.list(KEYSPACE \ PRODUCER_SEQUENCE_FAMILY \ id.toString, RangePredicate(Order.Descending, 1))
+        val max : Column[StandardKey] = list(0)
+        max.name
+     }
+  }
+
 
   def recoverMessages(destination: ActiveMQDestination, batchPoint: AtomicLong, maxReturned: Int): java.util.List[Array[Byte]] = {
     logger.debug("recoverMessages(%s, %s,%s)".format(destination, batchPoint, maxReturned))
@@ -555,6 +569,8 @@ object CassandraClient {
   val MESSAGES_FAMILY = "Messages"
 
   val MESSAGE_TO_STORE_ID_FAMILY = "MessageIdToStoreId"
+
+  val PRODUCER_SEQUENCE_FAMILY = "ProducerSequenceIndex"
 
   val STORE_IDS_IN_USE_FAMILY = "StoreIdsInUse"
 

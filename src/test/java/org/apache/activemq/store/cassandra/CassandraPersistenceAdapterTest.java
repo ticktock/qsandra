@@ -36,6 +36,7 @@ public class CassandraPersistenceAdapterTest extends PersistenceAdapterTestSuppo
             adapter.deleteAllMessages();
         }
         brokerService.setPersistenceAdapter(adapter);
+        brokerService.setUseJmx(false);
         adapter.setBrokerService(brokerService);
         return adapter;
     }

@@ -1,5 +1,8 @@
 #qsandra - A Cassandra backed PersistenceAdapter for ActiveMQ
 
+Version 1.2 supports ActiveMQ 5.3 and Cassandra 0.6.1
+Version 1.3-SNAPSHOT supports ActiveMQ 5.4 and Cassandra 0.6.1
+
 ##Intro
 While this adapter can be used against any existing cassandra installation, the goal is to provide an ActiveMQ broker cluster
 that is available across multiple datacenters, that can tolerate the loss of a datacenter with no impact on availability

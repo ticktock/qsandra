@@ -3,10 +3,7 @@ package org.apache.activemq.store.cassandra;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.BrokerServiceAware;
 import org.apache.activemq.broker.ConnectionContext;
-import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.activemq.command.Message;
+import org.apache.activemq.command.*;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.store.MessageStore;
 import org.apache.activemq.store.PersistenceAdapter;
@@ -36,7 +33,7 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
 
     private MemoryTransactionStore transactionStore;
     private AtomicLong sequenceGenerator = new AtomicLong(0);
-    private AtomicInteger destinationCount;
+    private AtomicInteger destinationCount = new AtomicInteger(0);
     private WireFormat wireFormat = new OpenWireFormat();
     private CassandraClient cassandra;
     private ConcurrentMap<ActiveMQQueue, CassandraMessageStore> queues = new ConcurrentHashMap<ActiveMQQueue, CassandraMessageStore>();
@@ -138,6 +135,11 @@ public class CassandraPersistenceAdapter implements PersistenceAdapter, BrokerSe
         long brokerSeq = max.getMaxBrokerSeq();
         log.debug("getLastSequence: store {}, broker {}", sequenceGenerator.get(), brokerSeq);
         return brokerSeq;
+    }
+
+    
+    public long getLastProducerSequenceId(ProducerId id) throws IOException {
+        return cassandra.getMaxProducerSequenceId(id);
     }
 
     public AtomicLong getStoreSequenceGenerator() {

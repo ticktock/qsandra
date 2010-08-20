@@ -19,6 +19,7 @@ public class CassandraStoreBrokerTest extends BrokerTest {
     @Override
     protected BrokerService createBroker() throws Exception {
         BrokerService brokerService = new BrokerService();
+        brokerService.setUseJmx(false);
         CassandraPersistenceAdapter adapter = new CassandraPersistenceAdapter();
         CassandraClient cassandraClient = new CassandraClient();
         cassandraClient.setCassandraHost("localhost");
