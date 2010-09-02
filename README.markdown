@@ -1,6 +1,6 @@
 #qsandra - A Cassandra backed PersistenceAdapter for ActiveMQ
 
-Version 1.2 supports ActiveMQ 5.3 and Cassandra 0.6.1      
+Version 1.2.1 supports ActiveMQ 5.3 and Cassandra 0.6.1      
 Version 1.3-SNAPSHOT supports ActiveMQ 5.4 and Cassandra 0.6.1
 
 ##Intro
@@ -103,9 +103,9 @@ should do it.
 ##Installing
 If you have a standard activemq installation, take the assembly (.zip or .tar.gz) produced by mvn install, or downloaded from
 
-[http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz](http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.tar.gz) or
+[http://www.ticktock.com/maven/com/ticktock/qsandra/1.2.1/qsandra-1.2.1-install.tar.gz](http://www.ticktock.com/maven/com/ticktock/qsandra/1.2.1/qsandra-1.2.1-install.tar.gz) or
 
-[http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip](http://www.ticktock.com/maven/com/ticktock/qsandra/1.1-SNAPSHOT/qsandra-1.1-SNAPSHOT-install.zip)
+[http://www.ticktock.com/maven/com/ticktock/qsandra/1.2.1/qsandra-1.2.1-install.zip](http://www.ticktock.com/maven/com/ticktock/qsandra/1.2.1/qsandra-1.2.1-install.zip)
 
 and place it in the root of your activemq install and unpack. This will place the necessary jars in lib/optional. You can now include this persistence adapter in your broker configuration.
 
@@ -122,6 +122,6 @@ Add to dependencies:
         <dependency>
             <groupId>com.tickock</groupId>
             <artifactId>qsandra</artifactId>
-            <version>1.1-SNAPSHOT</version>
+            <version>1.2.1</version>
         </dependency>
 
