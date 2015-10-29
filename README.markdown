@@ -56,7 +56,7 @@ Here is an example spring config.
 		<beans> 
 
 ####Cassandra
-The keyspace defined [here](qsandra/blob/master/src/main/resources/keyspace.xml) needs to be deployed into your cassandra cluster, *after you modify
+The keyspace defined [here](https://raw.githubusercontent.com/ticktock/qsandra/master/src/main/resources/keyspace.xml) needs to be deployed into your cassandra cluster, *after you modify
 the ReplicaPlacementStrategy,ReplicationFactor,and EndPointSnitch appropriately for your use case* 
 
 ####ZooKeeper
